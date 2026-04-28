@@ -8,14 +8,14 @@ vi.mock('../../lib/supabase.js', () => ({
 vi.mock('stripe', () => ({ default: vi.fn().mockReturnValue({}) }))
 
 import { createUserClient } from '../../lib/supabase.js'
-import { requireAuth, requireAdmin } from '../../middleware/auth.js'
+import { requireAuth, requireAdmin, type AuthVars } from '../../middleware/auth.js'
 import { q, buildClient } from '../helpers/mock-chain.js'
 
 const USER = { id: 'user-123' }
 const ADMIN_USER = { id: 'admin-456' }
 
 function makeApp(middleware: any) {
-  const app = new Hono()
+  const app = new Hono<{ Variables: AuthVars }>()
   app.use(middleware)
   app.get('/test', (c) => c.json({ userId: c.get('userId') }))
   app.post('/test', (c) => c.json({ userId: c.get('userId') }))
