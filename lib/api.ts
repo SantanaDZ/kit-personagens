@@ -19,3 +19,13 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
     },
   })
 }
+
+export async function unlockKit(kitId: string) {
+  const res = await apiFetch('/subscriptions/unlock-kit', {
+    method: 'POST',
+    body: JSON.stringify({ kitId }),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || 'Erro ao desbloquear kit')
+  return json
+}

@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { LogOut, User as UserIcon, Settings, LayoutDashboard, ShoppingBag } from 'lucide-react'
+import { LogOut, User as UserIcon, Settings, LayoutDashboard, ShoppingBag, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
@@ -23,6 +24,13 @@ interface DashboardNavProps {
 
 export function DashboardNav({ user, profile }: DashboardNavProps) {
   const router = useRouter()
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -35,7 +43,7 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
     : user.email?.slice(0, 2).toUpperCase() || 'U'
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className={`sticky top-0 z-50 w-full transition-all duration-300 ${scrolled ? 'border-b bg-background/80 backdrop-blur-md shadow-sm' : 'bg-transparent border-transparent'}`}>
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2">
@@ -50,6 +58,12 @@ export function DashboardNav({ user, profile }: DashboardNavProps) {
               <Link href="/catalog" className="flex items-center gap-1.5">
                 <ShoppingBag className="h-4 w-4" />
                 Explorar Kits
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/planos" className="flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4" />
+                Planos
               </Link>
             </Button>
           </nav>

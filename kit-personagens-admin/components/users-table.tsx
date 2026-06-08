@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
-import { Settings } from 'lucide-react'
+import { Settings, KeyRound } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -108,8 +108,19 @@ function ManageKitsDialog({
   )
 }
 
+async function sendPasswordReset(userId: string, userName: string | null) {
+  const res = await fetch(`/api/users/${userId}/reset-password`, { method: 'POST' })
+  if (res.ok) {
+    toast.success(`Email de redefinição enviado para ${userName ?? 'o usuário'}`)
+  } else {
+    const json = await res.json().catch(() => ({}))
+    toast.error(json.error ?? 'Erro ao enviar email')
+  }
+}
+
 export function UsersTable({ users, kits }: { users: Profile[]; kits: Kit[] }) {
   const [managing, setManaging] = useState<Profile | null>(null)
+  const [resettingId, setResettingId] = useState<string | null>(null)
 
   return (
     <>
@@ -147,10 +158,25 @@ export function UsersTable({ users, kits }: { users: Profile[]; kits: Kit[] }) {
                 </td>
                 <td className="px-4 py-3 text-right">
                   {!user.is_admin && (
-                    <Button variant="ghost" size="sm" onClick={() => setManaging(user)}>
-                      <Settings className="h-4 w-4 mr-1.5" />
-                      Acessos
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={resettingId === user.id}
+                        onClick={async () => {
+                          setResettingId(user.id)
+                          await sendPasswordReset(user.id, user.full_name)
+                          setResettingId(null)
+                        }}
+                      >
+                        <KeyRound className="h-4 w-4 mr-1.5" />
+                        {resettingId === user.id ? 'Enviando...' : 'Redefinir senha'}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setManaging(user)}>
+                        <Settings className="h-4 w-4 mr-1.5" />
+                        Acessos
+                      </Button>
+                    </div>
                   )}
                 </td>
               </tr>

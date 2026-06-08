@@ -7,6 +7,8 @@ import checkoutRoute from './routes/checkout.js'
 import webhooksRoute from './routes/webhooks.js'
 import kitsRoute from './routes/kits.js'
 import adminRoute from './routes/admin.js'
+import plansRoute from './routes/plans.js'
+import subscriptionsRoute from './routes/subscriptions.js'
 
 const app = new Hono()
 
@@ -26,6 +28,8 @@ app.use(
 
 app.get('/health', (c) => c.json({ ok: true }))
 
+app.route('/plans', plansRoute)
+app.route('/subscriptions', subscriptionsRoute)
 app.route('/checkout', checkoutRoute)
 app.route('/webhooks', webhooksRoute)
 app.route('/admin/kits', kitsRoute)

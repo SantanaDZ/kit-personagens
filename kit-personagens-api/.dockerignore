@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+npm-debug.log*
+.git
+src/__tests__
+*.test.ts
+vitest.config.ts
+coverage
+railway.json
