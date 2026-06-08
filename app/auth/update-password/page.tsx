@@ -19,6 +19,10 @@ function UpdatePasswordForm() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    if (searchParams.get('error')) {
+      setInvalid(true)
+      return
+    }
     const code = searchParams.get('code')
     if (!code) {
       setInvalid(true)
