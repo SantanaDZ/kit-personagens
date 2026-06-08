@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 
-export default function UpdatePasswordPage() {
+function UpdatePasswordForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [ready, setReady] = useState(false)
@@ -18,7 +18,6 @@ export default function UpdatePasswordPage() {
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Troca o ?code= por uma sessão válida (PKCE flow do Supabase)
   useEffect(() => {
     const code = searchParams.get('code')
     if (!code) {
@@ -58,6 +57,64 @@ export default function UpdatePasswordPage() {
   }
 
   return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-2xl">Nova senha</CardTitle>
+        <CardDescription>
+          {invalid
+            ? 'Este link é inválido ou já expirou.'
+            : 'Escolha uma nova senha para sua conta'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {invalid ? (
+          <div className="space-y-3 text-center">
+            <p className="text-sm text-muted-foreground">
+              Solicite um novo link na página de login.
+            </p>
+            <Button className="w-full" asChild>
+              <a href="/auth/forgot-password">Solicitar novo link</a>
+            </Button>
+          </div>
+        ) : !ready ? (
+          <p className="text-sm text-muted-foreground text-center py-4">Verificando link...</p>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="password">Nova senha</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                required
+                autoFocus
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="confirm">Confirmar nova senha</Label>
+              <Input
+                id="confirm"
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Repita a senha"
+                required
+              />
+            </div>
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? 'Salvando...' : 'Salvar nova senha'}
+            </Button>
+          </form>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+export default function UpdatePasswordPage() {
+  return (
     <div className="flex min-h-svh w-full items-center justify-center bg-muted/30 p-6 md:p-10">
       <div className="w-full max-w-sm">
         <div className="flex flex-col gap-6">
@@ -65,60 +122,15 @@ export default function UpdatePasswordPage() {
             <h1 className="text-3xl font-bold tracking-tight">Kits Criativos</h1>
             <p className="text-muted-foreground mt-1">Redefinição de senha</p>
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">Nova senha</CardTitle>
-              <CardDescription>
-                {invalid
-                  ? 'Este link é inválido ou já expirou.'
-                  : 'Escolha uma nova senha para sua conta'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {invalid ? (
-                <div className="space-y-3 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Solicite um novo link na página de login.
-                  </p>
-                  <Button className="w-full" asChild>
-                    <a href="/auth/forgot-password">Solicitar novo link</a>
-                  </Button>
-                </div>
-              ) : !ready ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Verificando link...</p>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="password">Nova senha</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
-                      required
-                      autoFocus
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="confirm">Confirmar nova senha</Label>
-                    <Input
-                      id="confirm"
-                      type="password"
-                      value={confirm}
-                      onChange={(e) => setConfirm(e.target.value)}
-                      placeholder="Repita a senha"
-                      required
-                    />
-                  </div>
-                  <Button type="submit" disabled={loading} className="w-full">
-                    {loading ? 'Salvando...' : 'Salvar nova senha'}
-                  </Button>
-                </form>
-              )}
-            </CardContent>
-          </Card>
+          <Suspense fallback={
+            <Card>
+              <CardContent className="py-8">
+                <p className="text-sm text-muted-foreground text-center">Carregando...</p>
+              </CardContent>
+            </Card>
+          }>
+            <UpdatePasswordForm />
+          </Suspense>
         </div>
       </div>
     </div>
