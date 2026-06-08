@@ -2,13 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { Music, BookOpen, Sparkles, ArrowRight, ShoppingCart } from 'lucide-react'
+import { Music, BookOpen, Sparkles, ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-
-function formatPrice(cents: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100)
-}
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -18,9 +14,8 @@ export default async function HomePage() {
 
   const { data: kits } = await supabase
     .from('kits')
-    .select('id, title, description, cover_image_url, price')
+    .select('id, title, description, cover_image_url')
     .eq('is_active', true)
-    .not('price', 'is', null)
     .order('created_at', { ascending: false })
 
   return (
@@ -54,13 +49,13 @@ export default async function HomePage() {
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Button size="lg" asChild>
-              <Link href="#kits">
-                Ver kits disponíveis
+              <Link href="/planos">
+                Ver planos e preços
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="/auth/login">Já tenho conta</Link>
+              <Link href="#kits">Explorar kits</Link>
             </Button>
           </div>
         </section>
@@ -98,14 +93,10 @@ export default async function HomePage() {
                         </p>
                       )}
                     </CardContent>
-                    <CardFooter className="flex items-center justify-between pt-0 pb-4">
-                      <span className="text-xl font-bold">
-                        {kit.price ? formatPrice(kit.price) : ''}
-                      </span>
-                      <Button size="sm" asChild>
-                        <Link href="/auth/sign-up">
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Adquirir
+                    <CardFooter className="pt-0 pb-4">
+                      <Button size="sm" className="w-full" asChild>
+                        <Link href="/planos">
+                          Acessar com assinatura
                         </Link>
                       </Button>
                     </CardFooter>
@@ -113,7 +104,7 @@ export default async function HomePage() {
                 ))}
               </div>
               <p className="mt-8 text-center text-sm text-muted-foreground">
-                Crie uma conta gratuita para comprar e acessar seus kits
+                Assine um plano e desbloqueie os kits que precisar a cada mês
               </p>
             </div>
           </section>
