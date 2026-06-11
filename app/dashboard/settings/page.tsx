@@ -3,26 +3,38 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PasswordInput } from '@/components/ui/password-input'
+import { BackButton } from '@/components/ui/back-button'
+import { Spinner } from '@/components/ui/spinner'
+import { validatePassword, validatePasswordMatch, validateRequired } from '@/lib/validation'
 import { toast } from 'sonner'
 import { KeyRound } from 'lucide-react'
+
+type FieldErrors = {
+  password?: string | null
+  confirm?: string | null
+}
 
 export default function SettingsPage() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password.length < 6) {
-      toast.error('A senha deve ter pelo menos 6 caracteres')
+
+    const errors: FieldErrors = {
+      password: validatePassword(password),
+      confirm:
+        validateRequired(confirm, 'Repita a senha para confirmar') ?? validatePasswordMatch(password, confirm),
+    }
+    if (errors.password || errors.confirm) {
+      setFieldErrors(errors)
       return
     }
-    if (password !== confirm) {
-      toast.error('As senhas não coincidem')
-      return
-    }
+
     setLoading(true)
     const supabase = createClient()
     const { error } = await supabase.auth.updateUser({ password })
@@ -39,7 +51,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-8 max-w-md">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
+        <BackButton label="Voltar" fallbackHref="/dashboard" />
+        <h1 className="mt-2 text-[26px] font-bold tracking-tight md:text-3xl">Configurações</h1>
         <p className="text-muted-foreground mt-2">Gerencie os dados da sua conta</p>
       </div>
 
@@ -57,27 +70,55 @@ export default function SettingsPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="password">Nova senha</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                if (fieldErrors.password) {
+                  setFieldErrors((prev) => ({ ...prev, password: validatePassword(e.target.value) }))
+                }
+              }}
+              onBlur={(e) => setFieldErrors((prev) => ({ ...prev, password: validatePassword(e.target.value) }))}
+              aria-invalid={!!fieldErrors.password}
               placeholder="Mínimo 6 caracteres"
               required
+              autoFocus
             />
+            {fieldErrors.password && <p className="text-sm text-destructive">{fieldErrors.password}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="confirm">Confirmar nova senha</Label>
-            <Input
+            <PasswordInput
               id="confirm"
-              type="password"
               value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
+              onChange={(e) => {
+                setConfirm(e.target.value)
+                if (fieldErrors.confirm) {
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    confirm:
+                      validateRequired(e.target.value, 'Repita a senha para confirmar') ??
+                      validatePasswordMatch(password, e.target.value),
+                  }))
+                }
+              }}
+              onBlur={(e) =>
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  confirm:
+                    validateRequired(e.target.value, 'Repita a senha para confirmar') ??
+                    validatePasswordMatch(password, e.target.value),
+                }))
+              }
+              aria-invalid={!!fieldErrors.confirm}
               placeholder="Repita a senha"
               required
             />
+            {fieldErrors.confirm && <p className="text-sm text-destructive">{fieldErrors.confirm}</p>}
           </div>
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" disabled={loading} className="h-13 w-full text-base">
+            {loading && <Spinner className="mr-2" />}
             {loading ? 'Salvando...' : 'Salvar nova senha'}
           </Button>
         </form>

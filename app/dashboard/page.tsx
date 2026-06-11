@@ -41,7 +41,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Meus Kits</h1>
+        <h1 className="text-[26px] font-bold tracking-tight md:text-3xl">Meus Kits</h1>
         <p className="text-muted-foreground mt-2">Kits ativos no ciclo atual</p>
       </div>
 

@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { BackButton } from '@/components/ui/back-button'
+import { Spinner } from '@/components/ui/spinner'
+import { validateEmail } from '@/lib/validation'
 import Link from 'next/link'
 
 export default function ForgotPasswordPage() {
@@ -13,9 +16,17 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldError, setFieldError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const emailError = validateEmail(email)
+    if (emailError) {
+      setFieldError(emailError)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -33,11 +44,12 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-muted/30 p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-6">
+    <div className="flex min-h-svh w-full flex-col items-center justify-center bg-muted/30 p-6 md:p-10">
+      <div className="w-full max-w-[420px]">
+        <BackButton label="Voltar" fallbackHref="/auth/login" />
+        <div className="mt-2 flex flex-col gap-6">
           <div className="text-center">
-            <h1 className="text-3xl font-bold tracking-tight">Kits Criativos</h1>
+            <Link href="/" className="text-[26px] font-bold tracking-tight">Kits Criativos</Link>
             <p className="text-muted-foreground mt-1">Recuperação de senha</p>
           </div>
 
@@ -55,7 +67,7 @@ export default function ForgotPasswordPage() {
                     Se esse email estiver cadastrado, você receberá o link em instantes.
                     Verifique também a caixa de spam.
                   </p>
-                  <Button variant="outline" className="w-full" asChild>
+                  <Button variant="outline" className="h-13 w-full text-base" asChild>
                     <Link href="/auth/login">Voltar ao login</Link>
                   </Button>
                 </div>
@@ -69,18 +81,25 @@ export default function ForgotPasswordPage() {
                       placeholder="seu@email.com"
                       required
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value)
+                        if (fieldError) setFieldError(validateEmail(e.target.value))
+                      }}
+                      onBlur={(e) => setFieldError(validateEmail(e.target.value))}
+                      aria-invalid={!!fieldError}
                       autoFocus
                     />
+                    {fieldError && <p className="text-sm text-destructive">{fieldError}</p>}
                   </div>
                   {error && <p className="text-sm text-destructive">{error}</p>}
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button type="submit" className="h-13 w-full text-base" disabled={loading}>
+                    {loading && <Spinner className="mr-2" />}
                     {loading ? 'Enviando...' : 'Enviar link de redefinição'}
                   </Button>
                   <div className="text-center text-sm">
                     <Link
                       href="/auth/login"
-                      className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                      className="inline-block py-3 text-muted-foreground underline underline-offset-4 hover:text-foreground"
                     >
                       Voltar ao login
                     </Link>

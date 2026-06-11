@@ -29,7 +29,7 @@ export function KitCard({ kit }: KitCardProps) {
       <CardHeader>
         <CardTitle className="line-clamp-1">{kit.title}</CardTitle>
         {kit.description && (
-          <CardDescription className="line-clamp-2">{kit.description}</CardDescription>
+          <CardDescription className="line-clamp-3">{kit.description}</CardDescription>
         )}
       </CardHeader>
       <CardContent>
@@ -55,7 +55,7 @@ export function KitCard({ kit }: KitCardProps) {
             </span>
           )}
         </div>
-        <Button asChild className="w-full">
+        <Button asChild className="h-12 w-full text-base">
           <Link href={`/dashboard/kit/${kit.id}`}>Acessar Kit</Link>
         </Button>
       </CardContent>

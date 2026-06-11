@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Music, BookOpen, User, FileText, ArrowLeft, Play, Pause, Video } from 'lucide-react'
-import Link from 'next/link'
+import { Music, BookOpen, User, FileText, Play, Pause, Video } from 'lucide-react'
 import Image from 'next/image'
 import type { Kit } from '@/lib/types'
 import { AudioPlayer } from './audio-player'
+import { BackButton } from '@/components/ui/back-button'
 
 interface KitPlayerProps {
   kit: Kit
@@ -20,18 +20,12 @@ export function KitPlayer({ kit }: KitPlayerProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/dashboard">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{kit.title}</h1>
-          {kit.description && (
-            <p className="text-muted-foreground mt-1">{kit.description}</p>
-          )}
-        </div>
+      <div>
+        <BackButton label="Voltar" fallbackHref="/dashboard" />
+        <h1 className="text-[26px] font-bold tracking-tight md:text-3xl">{kit.title}</h1>
+        {kit.description && (
+          <p className="text-muted-foreground mt-1">{kit.description}</p>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

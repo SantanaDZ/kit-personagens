@@ -1,12 +1,14 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { BackButton } from '@/components/ui/back-button'
 import Link from 'next/link'
 
 export default function AuthErrorPage() {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <Card>
+    <div className="flex min-h-svh w-full flex-col items-center justify-center p-6 md:p-10">
+      <div className="w-full max-w-[420px]">
+        <BackButton label="Voltar" fallbackHref="/auth/login" />
+        <Card className="mt-2">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Erro de Autenticacao</CardTitle>
             <CardDescription>

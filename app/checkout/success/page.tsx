@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { BackButton } from '@/components/ui/back-button'
 import { CheckCircle, AlertCircle } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
@@ -56,13 +57,16 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
 
   if (verifyError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-6">
+        <div className="w-full max-w-md mb-2">
+          <BackButton label="Voltar" fallbackHref="/dashboard" />
+        </div>
         <div className="text-center max-w-md space-y-6">
           <div className="flex justify-center">
             <AlertCircle className="h-20 w-20 text-yellow-500" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Pagamento recebido</h1>
+            <h1 className="text-[26px] font-bold md:text-3xl">Pagamento recebido</h1>
             <p className="mt-2 text-muted-foreground">
               Seu pagamento foi processado, mas houve um problema ao liberar o acesso: <strong>{verifyError}</strong>.
               Entre em contato com o suporte informando o código da sessão: <code className="text-xs bg-muted px-1 rounded">{session_id}</code>
@@ -77,13 +81,16 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-6">
+      <div className="w-full max-w-md mb-2">
+        <BackButton label="Voltar" fallbackHref="/dashboard" />
+      </div>
       <div className="text-center max-w-md space-y-6">
         <div className="flex justify-center">
           <CheckCircle className="h-20 w-20 text-green-500" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold">Pagamento confirmado!</h1>
+          <h1 className="text-[26px] font-bold md:text-3xl">Pagamento confirmado!</h1>
           <p className="mt-2 text-muted-foreground">
             Você acaba de adquirir <strong>{kitTitle}</strong>. Ele já está disponível no seu painel.
           </p>

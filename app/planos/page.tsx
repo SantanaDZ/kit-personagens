@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { BackButton } from '@/components/ui/back-button'
 import { CheckCircle, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 
@@ -57,9 +58,10 @@ export default async function PlanosPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="container mx-auto px-4 py-16 max-w-5xl">
+      <div className="container mx-auto px-5 pt-4 pb-16 max-w-5xl">
+        <BackButton label="Voltar para o início" fallbackHref={user ? '/dashboard' : '/'} />
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold tracking-tight">Planos</h1>
+          <h1 className="text-[26px] font-bold tracking-tight md:text-4xl">Planos</h1>
           <p className="mt-3 text-muted-foreground text-lg">
             Escolha o plano ideal para o seu volume de atendimentos
           </p>
@@ -91,7 +93,7 @@ export default async function PlanosPage() {
                     {isActive && <Badge variant="secondary">Seu plano</Badge>}
                   </div>
                   <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold">{formatPrice(plan.price)}</span>
+                    <span className="text-[32px] font-bold">{formatPrice(plan.price)}</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -101,17 +103,17 @@ export default async function PlanosPage() {
                   </p>
                 </div>
 
-                <ul className="space-y-2 flex-1">
+                <ul className="space-y-3 flex-1">
                   {features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <li key={feature} className="flex items-start gap-2 text-[15px] leading-relaxed">
+                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
                       {feature}
                     </li>
                   ))}
                 </ul>
 
                 <Button
-                  className="w-full"
+                  className="h-13 w-full text-base"
                   variant={isPro ? 'default' : 'outline'}
                   disabled={isActive}
                   asChild={!isActive}

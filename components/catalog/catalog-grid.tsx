@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { Spinner } from '@/components/ui/spinner'
 import { CheckCircle, Unlock, Music, LogIn, Sparkles } from 'lucide-react'
 import { unlockKit } from '@/lib/api'
 import { toast } from 'sonner'
@@ -57,8 +58,12 @@ export function CatalogGrid({ kits, isLoggedIn, subscription }: CatalogGridProps
 
   if (kits.length === 0) {
     return (
-      <div className="text-center py-20 text-muted-foreground">
-        Nenhum kit disponível no momento.
+      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <Sparkles className="h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-4 text-lg font-semibold">Nenhum kit por aqui ainda</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Estamos preparando novos kits. Volte em breve para conferir as novidades!
+        </p>
       </div>
     )
   }
@@ -86,16 +91,16 @@ export function CatalogGrid({ kits, isLoggedIn, subscription }: CatalogGridProps
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {kits.map((kit) => (
           <Card key={kit.id} className="overflow-hidden flex flex-col">
-            <div className="w-full aspect-square bg-muted overflow-hidden">
+            <div className="w-full aspect-video bg-muted overflow-hidden">
               {kit.cover_image_url ? (
                 <Image
                   src={kit.cover_image_url}
                   alt={kit.title}
-                  width={400}
-                  height={400}
+                  width={640}
+                  height={360}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -108,7 +113,7 @@ export function CatalogGrid({ kits, isLoggedIn, subscription }: CatalogGridProps
             <CardContent className="flex-1 pt-4">
               <h2 className="font-semibold text-lg leading-tight">{kit.title}</h2>
               {kit.description && (
-                <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                <p className="mt-1 text-sm text-muted-foreground line-clamp-3">
                   {kit.description}
                 </p>
               )}
@@ -116,38 +121,41 @@ export function CatalogGrid({ kits, isLoggedIn, subscription }: CatalogGridProps
 
             <CardFooter className="pt-0 pb-4">
               {kit.unlocked ? (
-                <div className="flex items-center gap-2 w-full">
+                <div className="flex w-full items-center justify-between gap-2">
                   <Badge variant="secondary" className="gap-1">
                     <CheckCircle className="h-3 w-3" />
                     Desbloqueado
                   </Badge>
-                  <Button size="sm" variant="outline" className="ml-auto" asChild>
+                  <Button variant="outline" className="h-12 text-base" asChild>
                     <Link href={`/dashboard/kit/${kit.id}`}>Acessar</Link>
                   </Button>
                 </div>
               ) : !isLoggedIn ? (
-                <Button size="sm" variant="outline" className="w-full" asChild>
+                <Button variant="outline" className="h-12 w-full text-base" asChild>
                   <Link href="/auth/login?next=/catalog">
                     <LogIn className="h-4 w-4 mr-2" />
                     Entrar para assinar
                   </Link>
                 </Button>
               ) : !subscription ? (
-                <Button size="sm" className="w-full" asChild>
+                <Button className="h-12 w-full text-base" asChild>
                   <Link href="/planos">Ver planos</Link>
                 </Button>
               ) : !hasCredits ? (
-                <Button size="sm" variant="outline" className="w-full" asChild>
+                <Button variant="outline" className="h-12 w-full text-base" asChild>
                   <Link href="/planos">Fazer upgrade</Link>
                 </Button>
               ) : (
                 <Button
-                  size="sm"
-                  className="w-full"
+                  className="h-12 w-full text-base"
                   onClick={() => handleUnlock(kit.id)}
                   disabled={loadingId === kit.id}
                 >
-                  <Unlock className="h-4 w-4 mr-2" />
+                  {loadingId === kit.id ? (
+                    <Spinner className="mr-2" />
+                  ) : (
+                    <Unlock className="h-4 w-4 mr-2" />
+                  )}
                   {loadingId === kit.id ? 'Desbloqueando...' : 'Desbloquear'}
                 </Button>
               )}

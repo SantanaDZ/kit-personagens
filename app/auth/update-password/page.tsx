@@ -4,10 +4,19 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { PasswordInput } from '@/components/ui/password-input'
+import { BackButton } from '@/components/ui/back-button'
+import { Spinner } from '@/components/ui/spinner'
+import { validatePassword, validatePasswordMatch, validateRequired } from '@/lib/validation'
 import { toast } from 'sonner'
+import Link from 'next/link'
+
+type FieldErrors = {
+  password?: string | null
+  confirm?: string | null
+}
 
 function UpdatePasswordForm() {
   const router = useRouter()
@@ -16,6 +25,7 @@ function UpdatePasswordForm() {
   const [invalid, setInvalid] = useState(false)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -40,14 +50,17 @@ function UpdatePasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (password.length < 6) {
-      toast.error('A senha deve ter pelo menos 6 caracteres')
+
+    const errors: FieldErrors = {
+      password: validatePassword(password),
+      confirm:
+        validateRequired(confirm, 'Repita a senha para confirmar') ?? validatePasswordMatch(password, confirm),
+    }
+    if (errors.password || errors.confirm) {
+      setFieldErrors(errors)
       return
     }
-    if (password !== confirm) {
-      toast.error('As senhas não coincidem')
-      return
-    }
+
     setLoading(true)
     const supabase = createClient()
     const { error } = await supabase.auth.updateUser({ password })
@@ -76,7 +89,7 @@ function UpdatePasswordForm() {
             <p className="text-sm text-muted-foreground">
               Solicite um novo link na página de login.
             </p>
-            <Button className="w-full" asChild>
+            <Button className="h-13 w-full text-base" asChild>
               <a href="/auth/forgot-password">Solicitar novo link</a>
             </Button>
           </div>
@@ -86,28 +99,55 @@ function UpdatePasswordForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="password">Nova senha</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  if (fieldErrors.password) {
+                    setFieldErrors((prev) => ({ ...prev, password: validatePassword(e.target.value) }))
+                  }
+                }}
+                onBlur={(e) => setFieldErrors((prev) => ({ ...prev, password: validatePassword(e.target.value) }))}
+                aria-invalid={!!fieldErrors.password}
                 placeholder="Mínimo 6 caracteres"
                 required
                 autoFocus
               />
+              {fieldErrors.password && <p className="text-sm text-destructive">{fieldErrors.password}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirm">Confirmar nova senha</Label>
-              <Input
+              <PasswordInput
                 id="confirm"
-                type="password"
                 value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
+                onChange={(e) => {
+                  setConfirm(e.target.value)
+                  if (fieldErrors.confirm) {
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      confirm:
+                        validateRequired(e.target.value, 'Repita a senha para confirmar') ??
+                        validatePasswordMatch(password, e.target.value),
+                    }))
+                  }
+                }}
+                onBlur={(e) =>
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    confirm:
+                      validateRequired(e.target.value, 'Repita a senha para confirmar') ??
+                      validatePasswordMatch(password, e.target.value),
+                  }))
+                }
+                aria-invalid={!!fieldErrors.confirm}
                 placeholder="Repita a senha"
                 required
               />
+              {fieldErrors.confirm && <p className="text-sm text-destructive">{fieldErrors.confirm}</p>}
             </div>
-            <Button type="submit" disabled={loading} className="w-full">
+            <Button type="submit" disabled={loading} className="h-13 w-full text-base">
+              {loading && <Spinner className="mr-2" />}
               {loading ? 'Salvando...' : 'Salvar nova senha'}
             </Button>
           </form>
@@ -119,11 +159,12 @@ function UpdatePasswordForm() {
 
 export default function UpdatePasswordPage() {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-muted/30 p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-6">
+    <div className="flex min-h-svh w-full flex-col items-center justify-center bg-muted/30 p-6 md:p-10">
+      <div className="w-full max-w-[420px]">
+        <BackButton label="Voltar" fallbackHref="/auth/login" />
+        <div className="mt-2 flex flex-col gap-6">
           <div className="text-center">
-            <h1 className="text-3xl font-bold tracking-tight">Kits Criativos</h1>
+            <Link href="/" className="text-[26px] font-bold tracking-tight">Kits Criativos</Link>
             <p className="text-muted-foreground mt-1">Redefinição de senha</p>
           </div>
           <Suspense fallback={

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { CatalogGrid } from '@/components/catalog/catalog-grid'
+import { BackButton } from '@/components/ui/back-button'
 
 export default async function CatalogPage() {
   const supabase = await createClient()
@@ -54,9 +55,10 @@ export default async function CatalogPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="container mx-auto px-4 py-12 max-w-6xl">
+      <div className="container mx-auto px-5 py-12 max-w-6xl">
+        <BackButton label="Voltar" fallbackHref={user ? '/dashboard' : '/'} />
         <div className="mb-10 text-center">
-          <h1 className="text-4xl font-bold tracking-tight">Kits de Personagens</h1>
+          <h1 className="text-[26px] font-bold tracking-tight md:text-4xl">Kits de Personagens</h1>
           <p className="mt-3 text-muted-foreground text-lg">
             Escolha os kits para usar nos seus atendimentos este mês
           </p>
