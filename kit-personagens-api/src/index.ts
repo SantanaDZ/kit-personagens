@@ -16,11 +16,16 @@ app.use(logger())
 const allowedOrigins = [
   process.env.FRONTEND_URL ?? 'http://localhost:3000',
   process.env.ADMIN_URL ?? 'http://localhost:3002',
-]
+].map((url) => url.replace(/\/$/, ''))
+
+// Cobre as URLs únicas geradas pela Vercel para cada deploy/preview
+// (ex.: kit-personagens-h9a0al0nl-santanadzs-projects.vercel.app)
+const vercelPreviewPattern = /^https:\/\/kit-personagens(-admin)?[a-z0-9-]*\.vercel\.app$/
 
 app.use(
   cors({
-    origin: (origin) => (allowedOrigins.includes(origin) ? origin : allowedOrigins[0]),
+    origin: (origin) =>
+      allowedOrigins.includes(origin) || vercelPreviewPattern.test(origin) ? origin : null,
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   })
