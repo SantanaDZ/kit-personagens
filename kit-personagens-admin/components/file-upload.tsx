@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase/client'
 import { Upload, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
 interface FileUploadProps {
@@ -30,12 +31,14 @@ export function FileUpload({ value, onChange, accept, folder }: FileUploadProps)
     // Limpar input para permitir re-upload do mesmo arquivo
     e.target.value = ''
 
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('folder', folder)
-
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      // 1. Pede ao servidor uma URL de upload assinada (payload pequeno, sem
+      // o arquivo) — evita o limite de 4.5MB das Vercel Functions.
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, folder }),
+      })
 
       let json: Record<string, string> = {}
       try {
@@ -52,13 +55,26 @@ export function FileUpload({ value, onChange, accept, folder }: FileUploadProps)
         return
       }
 
-      if (!json.url) {
+      const { token, path, publicUrl } = json
+      if (!token || !path || !publicUrl) {
         setStatus('error')
-        setErrorMessage('Servidor não retornou a URL do arquivo')
+        setErrorMessage('Servidor não retornou os dados de upload')
         return
       }
 
-      onChange(json.url)
+      // 2. Envia o arquivo direto para o Supabase Storage usando a URL assinada.
+      const supabase = createClient()
+      const { error } = await supabase.storage
+        .from('kit-assets')
+        .uploadToSignedUrl(path, token, file, { contentType: file.type })
+
+      if (error) {
+        setStatus('error')
+        setErrorMessage(error.message)
+        return
+      }
+
+      onChange(publicUrl)
       setStatus('success')
     } catch (err) {
       setStatus('error')

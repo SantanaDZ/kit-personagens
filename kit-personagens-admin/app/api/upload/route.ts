@@ -12,11 +12,11 @@ export async function POST(request: NextRequest) {
       .from('profiles').select('is_admin').eq('id', user.id).single()
     if (!profile?.is_admin) return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
 
-    const formData = await request.formData()
-    const file = formData.get('file') as File | null
-    const folder = (formData.get('folder') as string) || 'uploads'
+    const { filename, folder } = await request.json()
 
-    if (!file) return NextResponse.json({ error: 'Arquivo ausente' }, { status: 400 })
+    if (!filename || typeof filename !== 'string') {
+      return NextResponse.json({ error: 'Nome do arquivo ausente' }, { status: 400 })
+    }
 
     const admin = createAdminClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,23 +24,24 @@ export async function POST(request: NextRequest) {
     )
 
     const timestamp = Date.now()
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-    const path = `${folder}/${timestamp}_${safeName}`
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const path = `${(folder as string) || 'uploads'}/${timestamp}_${safeName}`
 
-    const bytes = await file.arrayBuffer()
-    const { error: uploadError } = await admin.storage
+    // Upload assinado: o arquivo vai direto do navegador para o Supabase
+    // Storage, sem passar pela function (evita o limite de 4.5MB da Vercel).
+    const { data, error } = await admin.storage
       .from('kit-assets')
-      .upload(path, bytes, { contentType: file.type })
+      .createSignedUploadUrl(path)
 
-    if (uploadError) {
-      return NextResponse.json({ error: uploadError.message }, { status: 500 })
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     const { data: { publicUrl } } = admin.storage
       .from('kit-assets')
-      .getPublicUrl(path)
+      .getPublicUrl(data.path)
 
-    return NextResponse.json({ url: publicUrl })
+    return NextResponse.json({ token: data.token, path: data.path, publicUrl })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno no servidor'
     return NextResponse.json({ error: message }, { status: 500 })
