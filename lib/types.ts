@@ -12,6 +12,7 @@ export interface Kit {
   title: string
   description: string | null
   music_url: string | null
+  music_path: string | null
   music_title: string | null
   story_text: string | null
   video_url: string | null
