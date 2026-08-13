@@ -1,9 +1,14 @@
 import { Hono } from 'hono'
-import { stripe } from '../lib/stripe.js'
 import { createUserClient } from '../lib/supabase.js'
 import { requireAdmin, type AuthVars } from '../middleware/auth.js'
 
 const app = new Hono<{ Variables: AuthVars }>()
+
+// Nota: kits não são mais sincronizados com o Stripe ao salvar — a venda
+// avulsa por kit foi substituída pelo modelo de assinatura (planos), e o
+// Stripe deve ser trocado pelo Mercado Pago antes de ir para produção.
+// stripe_product_id/stripe_price_id só existem por compatibilidade com
+// dados legados e não são mais escritos por estas rotas.
 
 app.post('/', requireAdmin, async (c) => {
   const body = await c.req.json()
@@ -14,29 +19,6 @@ app.post('/', requireAdmin, async (c) => {
     guide_text, cover_image_url,
   } = body
 
-  let stripe_product_id: string | null = null
-  let stripe_price_id: string | null = null
-
-  try {
-    if (price && price > 0) {
-      const product = await stripe.products.create({
-        name: title,
-        ...(description ? { description } : {}),
-        ...(cover_image_url ? { images: [cover_image_url] } : {}),
-      })
-      const stripePrice = await stripe.prices.create({
-        product: product.id,
-        unit_amount: price,
-        currency: 'brl',
-      })
-      stripe_product_id = product.id
-      stripe_price_id = stripePrice.id
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro desconhecido'
-    return c.json({ error: `Erro ao sincronizar com o Stripe: ${message}` }, 502)
-  }
-
   const supabase = createUserClient(c.get('token'))
   const { data: kit, error } = await supabase
     .from('kits')
@@ -45,8 +27,6 @@ app.post('/', requireAdmin, async (c) => {
       description: description || null,
       is_active: is_active ?? true,
       price: price || null,
-      stripe_product_id,
-      stripe_price_id,
       music_url: music_url || null,
       music_title: music_title || null,
       story_text: story_text || null,
@@ -76,48 +56,6 @@ app.patch('/:id', requireAdmin, async (c) => {
 
   const supabase = createUserClient(c.get('token'))
 
-  const { data: existing } = await supabase
-    .from('kits')
-    .select('stripe_product_id, stripe_price_id, price')
-    .eq('id', id)
-    .single()
-
-  let stripe_product_id = existing?.stripe_product_id ?? null
-  let stripe_price_id = existing?.stripe_price_id ?? null
-
-  try {
-    if (price && price > 0) {
-      if (!stripe_product_id) {
-        const product = await stripe.products.create({
-          name: title,
-          ...(description ? { description } : {}),
-          ...(cover_image_url ? { images: [cover_image_url] } : {}),
-        })
-        stripe_product_id = product.id
-      } else {
-        await stripe.products.update(stripe_product_id, {
-          name: title,
-          ...(description ? { description } : {}),
-        })
-      }
-
-      if (price !== existing?.price || !stripe_price_id) {
-        if (stripe_price_id) {
-          await stripe.prices.update(stripe_price_id, { active: false })
-        }
-        const stripePrice = await stripe.prices.create({
-          product: stripe_product_id,
-          unit_amount: price,
-          currency: 'brl',
-        })
-        stripe_price_id = stripePrice.id
-      }
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro desconhecido'
-    return c.json({ error: `Erro ao sincronizar com o Stripe: ${message}` }, 502)
-  }
-
   const { data: kit, error } = await supabase
     .from('kits')
     .update({
@@ -125,8 +63,6 @@ app.patch('/:id', requireAdmin, async (c) => {
       description: description || null,
       is_active: is_active ?? true,
       price: price || null,
-      stripe_product_id,
-      stripe_price_id,
       music_url: music_url || null,
       music_title: music_title || null,
       story_text: story_text || null,
