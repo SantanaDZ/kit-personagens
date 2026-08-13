@@ -17,19 +17,24 @@ app.post('/', requireAdmin, async (c) => {
   let stripe_product_id: string | null = null
   let stripe_price_id: string | null = null
 
-  if (price && price > 0) {
-    const product = await stripe.products.create({
-      name: title,
-      ...(description ? { description } : {}),
-      ...(cover_image_url ? { images: [cover_image_url] } : {}),
-    })
-    const stripePrice = await stripe.prices.create({
-      product: product.id,
-      unit_amount: price,
-      currency: 'brl',
-    })
-    stripe_product_id = product.id
-    stripe_price_id = stripePrice.id
+  try {
+    if (price && price > 0) {
+      const product = await stripe.products.create({
+        name: title,
+        ...(description ? { description } : {}),
+        ...(cover_image_url ? { images: [cover_image_url] } : {}),
+      })
+      const stripePrice = await stripe.prices.create({
+        product: product.id,
+        unit_amount: price,
+        currency: 'brl',
+      })
+      stripe_product_id = product.id
+      stripe_price_id = stripePrice.id
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro desconhecido'
+    return c.json({ error: `Erro ao sincronizar com o Stripe: ${message}` }, 502)
   }
 
   const supabase = createUserClient(c.get('token'))
@@ -80,32 +85,37 @@ app.patch('/:id', requireAdmin, async (c) => {
   let stripe_product_id = existing?.stripe_product_id ?? null
   let stripe_price_id = existing?.stripe_price_id ?? null
 
-  if (price && price > 0) {
-    if (!stripe_product_id) {
-      const product = await stripe.products.create({
-        name: title,
-        ...(description ? { description } : {}),
-        ...(cover_image_url ? { images: [cover_image_url] } : {}),
-      })
-      stripe_product_id = product.id
-    } else {
-      await stripe.products.update(stripe_product_id, {
-        name: title,
-        ...(description ? { description } : {}),
-      })
-    }
-
-    if (price !== existing?.price || !stripe_price_id) {
-      if (stripe_price_id) {
-        await stripe.prices.update(stripe_price_id, { active: false })
+  try {
+    if (price && price > 0) {
+      if (!stripe_product_id) {
+        const product = await stripe.products.create({
+          name: title,
+          ...(description ? { description } : {}),
+          ...(cover_image_url ? { images: [cover_image_url] } : {}),
+        })
+        stripe_product_id = product.id
+      } else {
+        await stripe.products.update(stripe_product_id, {
+          name: title,
+          ...(description ? { description } : {}),
+        })
       }
-      const stripePrice = await stripe.prices.create({
-        product: stripe_product_id,
-        unit_amount: price,
-        currency: 'brl',
-      })
-      stripe_price_id = stripePrice.id
+
+      if (price !== existing?.price || !stripe_price_id) {
+        if (stripe_price_id) {
+          await stripe.prices.update(stripe_price_id, { active: false })
+        }
+        const stripePrice = await stripe.prices.create({
+          product: stripe_product_id,
+          unit_amount: price,
+          currency: 'brl',
+        })
+        stripe_price_id = stripePrice.id
+      }
     }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro desconhecido'
+    return c.json({ error: `Erro ao sincronizar com o Stripe: ${message}` }, 502)
   }
 
   const { data: kit, error } = await supabase

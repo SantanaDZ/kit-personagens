@@ -96,6 +96,16 @@ describe('POST /admin/kits', () => {
     expect(stripe.prices.create).not.toHaveBeenCalled()
   })
 
+  it('returns 502 with Stripe error message when Stripe call throws', async () => {
+    setupAdmin({ kits: q(KIT) })
+    vi.mocked(stripe.products.create).mockRejectedValue(new Error('No such product'))
+
+    const res = await post(app, { title: 'Kit X', price: 1000 })
+    expect(res.status).toBe(502)
+    const body = await res.json()
+    expect(body.error).toContain('No such product')
+  })
+
   it('returns 500 on database insert error', async () => {
     setupAdmin({ kits: q(null, { message: 'unique violation' }) })
     vi.mocked(stripe.products.create).mockResolvedValue({ id: 'prod_1' } as any)
@@ -194,5 +204,18 @@ describe('PATCH /admin/kits/:id', () => {
 
     const res = await patch(app, 'kit-1', { title: 'Kit', price: 0 })
     expect(res.status).toBe(500)
+  })
+
+  it('returns 502 with Stripe error message when the stale stripe_product_id no longer exists', async () => {
+    mockPatchClient(
+      { stripe_product_id: 'prod_deleted', stripe_price_id: 'price_deleted', price: 1999 },
+      KIT
+    )
+    vi.mocked(stripe.products.update).mockRejectedValue(new Error('No such product: prod_deleted'))
+
+    const res = await patch(app, 'kit-1', { title: 'Kit Updated', price: 1999, video_url: 'https://youtu.be/abc' })
+    expect(res.status).toBe(502)
+    const body = await res.json()
+    expect(body.error).toContain('No such product')
   })
 })
