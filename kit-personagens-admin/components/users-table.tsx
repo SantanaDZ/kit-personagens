@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { apiFetch } from '@/lib/api'
 import { toast } from 'sonner'
 import { Settings, KeyRound } from 'lucide-react'
@@ -24,10 +25,26 @@ interface Kit {
   title: string
 }
 
-async function fetchUserKits(userId: string): Promise<string[]> {
+type AccessDuration = '1m' | '3m' | '6m' | '1y' | 'custom' | 'none'
+
+const DURATION_OPTIONS: { value: AccessDuration; label: string }[] = [
+  { value: '1m', label: '1 mês' },
+  { value: '3m', label: '3 meses' },
+  { value: '6m', label: '6 meses' },
+  { value: '1y', label: '1 ano' },
+  { value: 'none', label: 'Sem expiração' },
+  { value: 'custom', label: 'Personalizado' },
+]
+
+interface UserKitsInfo {
+  kitIds: string[]
+  expiresAt: string | null
+}
+
+async function fetchUserKits(userId: string): Promise<UserKitsInfo> {
   const res = await apiFetch(`/admin/users/${userId}/kits`)
   const json = await res.json()
-  return json.kitIds ?? []
+  return { kitIds: json.kitIds ?? [], expiresAt: json.expiresAt ?? null }
 }
 
 function ManageKitsDialog({
@@ -39,11 +56,11 @@ function ManageKitsDialog({
   kits: Kit[]
   onClose: () => void
 }) {
-  const { data: currentKitIds = [], mutate } = useSWR(
-    `user-kits-${user.id}`,
-    () => fetchUserKits(user.id)
-  )
+  const { data, mutate } = useSWR(`user-kits-${user.id}`, () => fetchUserKits(user.id))
+  const currentKitIds = data?.kitIds ?? []
   const [selected, setSelected] = useState<Set<string>>(new Set(currentKitIds))
+  const [duration, setDuration] = useState<AccessDuration>('1m')
+  const [customDate, setCustomDate] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
   // Sync quando carrega
@@ -60,13 +77,21 @@ function ManageKitsDialog({
   }
 
   const handleSave = async () => {
+    if (duration === 'custom' && !customDate) {
+      toast.error('Escolha uma data para o acesso personalizado')
+      return
+    }
     setIsSaving(true)
     const res = await apiFetch(`/admin/users/${user.id}/kits`, {
       method: 'PUT',
-      body: JSON.stringify({ kitIds: Array.from(selected) }),
+      body: JSON.stringify({
+        kitIds: Array.from(selected),
+        duration,
+        ...(duration === 'custom' ? { customDate } : {}),
+      }),
     })
     if (res.ok) {
-      mutate(Array.from(selected))
+      mutate()
       toast.success('Acessos atualizados')
       onClose()
     } else {
@@ -81,6 +106,15 @@ function ManageKitsDialog({
         <DialogHeader>
           <DialogTitle>Acessos de {user.full_name ?? user.email}</DialogTitle>
         </DialogHeader>
+
+        {currentKitIds.length > 0 && (
+          <p className="text-xs text-muted-foreground -mt-1">
+            Acesso atual: {data?.expiresAt
+              ? `expira em ${format(new Date(data.expiresAt), 'dd/MM/yyyy', { locale: ptBR })}`
+              : 'permanente'}
+          </p>
+        )}
+
         <div className="space-y-2 py-2 max-h-72 overflow-y-auto">
           {kits.length === 0 && (
             <p className="text-sm text-muted-foreground">Nenhum kit disponível</p>
@@ -97,6 +131,30 @@ function ManageKitsDialog({
             </label>
           ))}
         </div>
+
+        <div className="space-y-2 border-t pt-3">
+          <Label htmlFor="access-duration">Duração do acesso</Label>
+          <select
+            id="access-duration"
+            className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value as AccessDuration)}
+          >
+            {DURATION_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          {duration === 'custom' && (
+            <input
+              type="date"
+              className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+              value={customDate}
+              onChange={(e) => setCustomDate(e.target.value)}
+              min={format(new Date(), 'yyyy-MM-dd')}
+            />
+          )}
+        </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleSave} disabled={isSaving}>

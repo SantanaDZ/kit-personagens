@@ -66,26 +66,55 @@ app.get('/users', async (c) => {
   return c.json({ users: data })
 })
 
+type AccessDuration = '1m' | '3m' | '6m' | '1y' | 'custom' | 'none'
+
+function resolveExpiresAt(duration: AccessDuration, customDate?: string): string | null {
+  if (duration === 'none') return null
+  if (duration === 'custom') {
+    if (!customDate) throw new Error('customDate é obrigatório para duration "custom"')
+    return new Date(customDate).toISOString()
+  }
+
+  const months = { '1m': 1, '3m': 3, '6m': 6, '1y': 12 }[duration]
+  const date = new Date()
+  date.setMonth(date.getMonth() + months)
+  return date.toISOString()
+}
+
 app.get('/users/:id/kits', async (c) => {
   const userId = c.req.param('id')
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('user_kits')
-    .select('kit_id')
+    .select('kit_id, expires_at')
     .eq('user_id', userId)
   if (error) return c.json({ error: error.message }, 500)
-  return c.json({ kitIds: data.map((r) => r.kit_id) })
+  return c.json({
+    kitIds: data.map((r) => r.kit_id),
+    expiresAt: data[0]?.expires_at ?? null,
+  })
 })
 
 app.put('/users/:id/kits', async (c) => {
   const userId = c.req.param('id')
-  const { kitIds } = await c.req.json<{ kitIds: string[] }>()
+  const { kitIds, duration, customDate } = await c.req.json<{
+    kitIds: string[]
+    duration: AccessDuration
+    customDate?: string
+  }>()
   const supabase = createAdminClient()
 
   await supabase.from('user_kits').delete().eq('user_id', userId)
 
   if (kitIds.length > 0) {
-    const rows = kitIds.map((kit_id) => ({ user_id: userId, kit_id }))
+    let expiresAt: string | null
+    try {
+      expiresAt = resolveExpiresAt(duration, customDate)
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'duration inválida' }, 400)
+    }
+
+    const rows = kitIds.map((kit_id) => ({ user_id: userId, kit_id, expires_at: expiresAt }))
     const { error } = await supabase.from('user_kits').insert(rows)
     if (error) return c.json({ error: error.message }, 500)
   }

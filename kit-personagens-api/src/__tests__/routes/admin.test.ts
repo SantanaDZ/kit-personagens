@@ -209,9 +209,12 @@ describe('GET /admin/users/:id/kits', () => {
   const app = makeApp()
   beforeEach(() => vi.clearAllMocks())
 
-  it('returns array of kit IDs owned by user', async () => {
+  it('returns array of kit IDs owned by user and current expiration', async () => {
     setupAdminAuth()
-    const userKits = [{ kit_id: 'kit-1' }, { kit_id: 'kit-2' }]
+    const userKits = [
+      { kit_id: 'kit-1', expires_at: '2026-09-13T00:00:00.000Z' },
+      { kit_id: 'kit-2', expires_at: '2026-09-13T00:00:00.000Z' },
+    ]
     vi.mocked(createAdminClient).mockReturnValue(
       buildClient({ user_kits: q(userKits) }) as any
     )
@@ -220,9 +223,10 @@ describe('GET /admin/users/:id/kits', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.kitIds).toEqual(['kit-1', 'kit-2'])
+    expect(body.expiresAt).toBe('2026-09-13T00:00:00.000Z')
   })
 
-  it('returns empty array when user owns no kits', async () => {
+  it('returns empty array and null expiration when user owns no kits', async () => {
     setupAdminAuth()
     vi.mocked(createAdminClient).mockReturnValue(
       buildClient({ user_kits: q([]) }) as any
@@ -232,6 +236,20 @@ describe('GET /admin/users/:id/kits', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.kitIds).toEqual([])
+    expect(body.expiresAt).toBeNull()
+  })
+
+  it('returns null expiration for permanent access grants', async () => {
+    setupAdminAuth()
+    const userKits = [{ kit_id: 'kit-1', expires_at: null }]
+    vi.mocked(createAdminClient).mockReturnValue(
+      buildClient({ user_kits: q(userKits) }) as any
+    )
+
+    const res = await get(app, '/admin/users/user-1/kits')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.expiresAt).toBeNull()
   })
 })
 
@@ -239,35 +257,77 @@ describe('PUT /admin/users/:id/kits', () => {
   const app = makeApp()
   beforeEach(() => vi.clearAllMocks())
 
-  it('replaces all user kits with new selection', async () => {
-    setupAdminAuth()
-    const insertSpy = vi.fn().mockReturnValue(q(null))
-    const deleteSpy = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue(q(null)) })
-    vi.mocked(createAdminClient).mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        delete: deleteSpy,
-        insert: insertSpy,
-      }),
-    } as any)
-
-    const res = await put(app, '/admin/users/user-1/kits', { kitIds: ['kit-a', 'kit-b'] })
-    expect(res.status).toBe(200)
-    expect(deleteSpy).toHaveBeenCalled()
-    expect(insertSpy).toHaveBeenCalledWith([
-      { user_id: 'user-1', kit_id: 'kit-a' },
-      { user_id: 'user-1', kit_id: 'kit-b' },
-    ])
-  })
-
-  it('deletes all kits when kitIds is empty array', async () => {
-    setupAdminAuth()
+  function mockClient() {
     const insertSpy = vi.fn().mockReturnValue(q(null))
     const deleteSpy = vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue(q(null)) })
     vi.mocked(createAdminClient).mockReturnValue({
       from: vi.fn().mockReturnValue({ delete: deleteSpy, insert: insertSpy }),
     } as any)
+    return { insertSpy, deleteSpy }
+  }
 
-    const res = await put(app, '/admin/users/user-1/kits', { kitIds: [] })
+  it('replaces all user kits with permanent access when duration is "none"', async () => {
+    setupAdminAuth()
+    const { insertSpy, deleteSpy } = mockClient()
+
+    const res = await put(app, '/admin/users/user-1/kits', {
+      kitIds: ['kit-a', 'kit-b'],
+      duration: 'none',
+    })
+    expect(res.status).toBe(200)
+    expect(deleteSpy).toHaveBeenCalled()
+    expect(insertSpy).toHaveBeenCalledWith([
+      { user_id: 'user-1', kit_id: 'kit-a', expires_at: null },
+      { user_id: 'user-1', kit_id: 'kit-b', expires_at: null },
+    ])
+  })
+
+  it('sets expires_at ~1 month ahead for duration "1m"', async () => {
+    setupAdminAuth()
+    const { insertSpy } = mockClient()
+
+    const res = await put(app, '/admin/users/user-1/kits', {
+      kitIds: ['kit-a'],
+      duration: '1m',
+    })
+    expect(res.status).toBe(200)
+    const inserted = insertSpy.mock.calls[0][0][0]
+    const expiresAt = new Date(inserted.expires_at)
+    const daysAhead = (expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    expect(daysAhead).toBeGreaterThan(27)
+    expect(daysAhead).toBeLessThan(32)
+  })
+
+  it('uses customDate verbatim for duration "custom"', async () => {
+    setupAdminAuth()
+    const { insertSpy } = mockClient()
+
+    const res = await put(app, '/admin/users/user-1/kits', {
+      kitIds: ['kit-a'],
+      duration: 'custom',
+      customDate: '2026-12-25',
+    })
+    expect(res.status).toBe(200)
+    const inserted = insertSpy.mock.calls[0][0][0]
+    expect(new Date(inserted.expires_at).toISOString().slice(0, 10)).toBe('2026-12-25')
+  })
+
+  it('returns 400 when duration is "custom" without customDate', async () => {
+    setupAdminAuth()
+    mockClient()
+
+    const res = await put(app, '/admin/users/user-1/kits', {
+      kitIds: ['kit-a'],
+      duration: 'custom',
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('deletes all kits when kitIds is empty array', async () => {
+    setupAdminAuth()
+    const { insertSpy, deleteSpy } = mockClient()
+
+    const res = await put(app, '/admin/users/user-1/kits', { kitIds: [], duration: 'none' })
     expect(res.status).toBe(200)
     expect(deleteSpy).toHaveBeenCalled()
     expect(insertSpy).not.toHaveBeenCalled()
