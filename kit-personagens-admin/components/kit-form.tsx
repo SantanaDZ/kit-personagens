@@ -179,7 +179,14 @@ export function KitForm({ kit }: { kit?: Kit }) {
               </div>
               <div className="grid gap-2">
                 <Label>Vídeo (opcional)</Label>
-                <FileUpload value={videoUrl} onChange={setVideoUrl} accept="video/*" folder="videos" />
+                <Input
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Cole o link do YouTube (ou uma URL direta de vídeo).
+                </p>
               </div>
             </CardContent>
           </Card>

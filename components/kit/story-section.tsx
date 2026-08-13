@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useReadingFontSize } from '@/lib/use-reading-prefs'
 import { formatStoryText, splitParagraphs } from '@/lib/format-story-text'
+import { getYouTubeEmbedUrl } from '@/lib/utils'
 import { ReadingMode } from './reading-mode'
 import { BookOpen, Eye } from 'lucide-react'
 
@@ -37,17 +38,28 @@ export function StorySection({
   }
 
   const paragraphs = splitParagraphs(formatStoryText(storyText))
+  const embedUrl = videoUrl ? getYouTubeEmbedUrl(videoUrl) : null
 
   return (
     <div className="space-y-4">
       {showVideo && videoUrl && (
         <div className="aspect-video w-full overflow-hidden rounded-lg">
-          <video
-            src={videoUrl}
-            controls
-            className="h-full w-full object-cover"
-            poster={coverImageUrl || undefined}
-          />
+          {embedUrl ? (
+            <iframe
+              src={embedUrl}
+              title="Vídeo ilustrativo"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="h-full w-full"
+            />
+          ) : (
+            <video
+              src={videoUrl}
+              controls
+              className="h-full w-full object-cover"
+              poster={coverImageUrl || undefined}
+            />
+          )}
         </div>
       )}
 
