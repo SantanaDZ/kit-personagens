@@ -16,6 +16,16 @@ export default async function CatalogPage() {
   let unlockedKitIds = new Set<string>()
 
   if (user) {
+    // Kits liberados manualmente pelo admin (compra avulsa legada ou
+    // acesso com prazo), fora do modelo de assinatura/créditos.
+    const { data: grantedUserKits } = await supabase
+      .from('user_kits')
+      .select('kit_id')
+      .eq('user_id', user.id)
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+
+    grantedUserKits?.forEach((g) => unlockedKitIds.add(g.kit_id))
+
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('id, status, current_period_end, plans(name, display_name, kit_limit)')

@@ -32,11 +32,36 @@ export default async function DashboardPage() {
     .gt('expires_at', new Date().toISOString())
     .order('unlocked_at', { ascending: false })
 
+  // Kits liberados manualmente pelo admin (compra avulsa legada ou acesso
+  // com prazo), fora do modelo de assinatura/créditos.
+  const { data: grantedUserKits } = await supabase
+    .from('user_kits')
+    .select(`
+      kit:kits (id, title, description, cover_image_url, character_name, character_image_url, is_active)
+    `)
+    .eq('user_id', user!.id)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+
   const plan = sub ? (Array.isArray(sub.plans) ? sub.plans[0] : sub.plans) : null
   const creditsUsed = credits?.length ?? 0
   const kitLimit = plan?.kit_limit ?? null
   const creditsRemaining = kitLimit === null ? null : (kitLimit - creditsUsed)
-  const kits = credits?.map((c) => c.kit).filter(Boolean) ?? []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function normalizeKit(kit: any): any {
+    return Array.isArray(kit) ? (kit[0] ?? null) : kit
+  }
+
+  const kitsById = new Map<string, ReturnType<typeof normalizeKit>>()
+  for (const c of credits ?? []) {
+    const kit = normalizeKit(c.kit)
+    if (kit) kitsById.set(kit.id, kit)
+  }
+  for (const g of grantedUserKits ?? []) {
+    const kit = normalizeKit(g.kit)
+    if (kit && !kitsById.has(kit.id)) kitsById.set(kit.id, kit)
+  }
+  const kits = Array.from(kitsById.values())
 
   return (
     <div className="space-y-8">
