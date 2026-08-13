@@ -33,19 +33,41 @@ function UpdatePasswordForm() {
       setInvalid(true)
       return
     }
-    const code = searchParams.get('code')
-    if (!code) {
+    if (!searchParams.get('code')) {
       setInvalid(true)
       return
     }
+
+    // O client do navegador troca o `code` da URL por sessão sozinho
+    // (detectSessionInUrl, ligado por padrão) assim que é criado — não
+    // chamamos exchangeCodeForSession aqui de novo, pois o código é de
+    // uso único e a segunda tentativa falharia mesmo com a troca
+    // automática já tendo dado certo. Só observamos o resultado.
+    let resolved = false
     const supabase = createClient()
-    supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-      if (error) {
-        setInvalid(true)
-      } else {
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        resolved = true
         setReady(true)
       }
     })
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && !resolved) {
+        resolved = true
+        setReady(true)
+      }
+    })
+
+    const timeout = setTimeout(() => {
+      if (!resolved) setInvalid(true)
+    }, 6000)
+
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
