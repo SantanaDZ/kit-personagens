@@ -36,7 +36,11 @@ export default function ForgotPasswordPage() {
     })
 
     if (error) {
-      setError('Erro ao enviar o email. Verifique o endereço e tente novamente.')
+      setError(
+        error.code === 'over_email_send_rate_limit'
+          ? 'Muitos pedidos de redefinição em pouco tempo. Aguarde alguns minutos e tente novamente.'
+          : 'Erro ao enviar o email. Verifique o endereço e tente novamente.'
+      )
     } else {
       setSent(true)
     }
